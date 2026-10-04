@@ -27,7 +27,15 @@ def generate_response(question,context):
     Args:
         prompt (str): The input prompt for the model.
     """
-    prompt = PROMPT_TEMPLATE.format(question=question, context=context)
-    response = model.generate_context(prompt=prompt)
-    return response.text
+    # Combine the prompt, context, and question into a single input for the model
+    combined_input = f"{prompt}\n\nContext: {context}\n\nQuestion: {question}"
+
+    # Generate a response using the Google Gemini model
+    response = model.generate_text(
+        input=combined_input,
+        temperature=0.7,
+        max_output_tokens=200
+    )
+
+    return response.text  # Return the generated text from the model
 
