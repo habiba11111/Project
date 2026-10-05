@@ -11,3 +11,10 @@ numpy
 torchvision 
 spacy
 pypdf
+chromadb
+langchain==0.2.17
+langchain-community==0.2.17
+langchain-huggingface
+langchain-google-generativeai
+ollama
+langchain-ollama
