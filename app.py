@@ -3,10 +3,10 @@ from io import BytesIO
 
 import streamlit as st
 
-from modules.llm import generate_response
-from modules.pdf_utils import chunk_text, extract_text_from_pdf
-from modules.vectordb import build_vector_database, return_context
+from modules.llm import load_model
+from modules.langchain import build_retrieval
 
+model = load_model()
 
 st.set_page_config(page_title="PDF Chat", page_icon="📚", layout="centered")
 
@@ -143,51 +143,25 @@ uploaded_file = st.file_uploader(
 if uploaded_file is None:
     st.info("Your document and question box will appear here once you upload a PDF.")
 else:
-    document_bytes = uploaded_file.getvalue()
-    document_id = hashlib.sha256(document_bytes).hexdigest()
+    retrieval = build_retrieval(uploaded_file)
 
-    if st.session_state.get("document_id") != document_id:
-        with st.spinner("Reading your PDF and preparing it for questions..."):
-            document_text = extract_text_from_pdf(BytesIO(document_bytes))
-            text_chunks = chunk_text(document_text)
-            st.session_state.document_id = document_id
-            st.session_state.document_name = uploaded_file.name
-            st.session_state.document_collection = (
-                build_vector_database(text_chunks) if text_chunks else None
-            )
-            st.session_state.messages = []
+    st.subheader("2. Ask a question")
+    user_question = st.text_area(
+        "Type your question here",
+        placeholder="What is the main topic of this document?",
+        height=100,
+    )
 
-    collection = st.session_state.document_collection
-    st.success(f"Ready to explore: {st.session_state.document_name}")
+    if user_question:
+        with st.spinner("Generating answer..."):
+            # Retrieve relevant documents from the vector store
+           relevant_docs = retrieval.invoke(user_question)
 
-    if collection is None:
-        st.warning(
-            "No readable text was found in this PDF. Try a text-based PDF instead of a scanned image."
-        )
-    else:
-        st.subheader("2. Ask a question")
-        with st.form("question_form", clear_on_submit=True):
-            user_query = st.text_input(
-                "What would you like to know?",
-                placeholder="For example: What are the main points?",
-            )
-            submitted = st.form_submit_button("Ask about this PDF")
+            # Combine the content of the relevant documents into a single context string
+           context = "\n\n".join([doc.page_content for doc in relevant_docs])
 
-        if submitted:
-            if not user_query.strip():
-                st.warning("Enter a question before submitting.")
-            else:
-                with st.spinner("Finding the answer in your document..."):
-                    context = return_context(user_query, collection)
-                    response = generate_response(user_query, context)
-                st.session_state.messages.append(
-                    {"question": user_query.strip(), "answer": response}
-                )
+            # Generate a response using the LLM model
+           response = model.invoke(f"Context: {context}\n\nQuestion: {user_question}")
 
-        if st.session_state.messages:
-            st.subheader("Your conversation")
-            for message in st.session_state.messages:
-                with st.chat_message("user"):
-                    st.markdown(message["question"])
-                with st.chat_message("assistant"):
-                    st.markdown(message["answer"])
+           st.subheader("Answer")
+           st.write(response.content)

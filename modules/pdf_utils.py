@@ -13,7 +13,7 @@ def extract_text_from_pdf(pdf_file):
         text = page.extract_text()
     return text
 
-
+# Replace with text splitter 
 def chunk_text(text, chunk_size=500):
     """
     Splits the text into chunks of a specified size.
