@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()  # Load environment variables from .env file
 
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-model = genai.GenerativeModel(model="gemini-2.5-flash")
+model = genai.GenerativeModel("gemini-3.8-flash")
 
 
 def load_prompt():
@@ -15,7 +15,7 @@ def load_prompt():
     Returns:
         str: The content of the prompt file.
     """
-    with open("prompt/prompt.txt", "r") as file:
+    with open("prompt/rag_prompt.txt", "r") as file:
         return file.read()
 
 prompt = load_prompt()  # Load the prompt from the file
@@ -30,11 +30,12 @@ def generate_response(question,context):
     # Combine the prompt, context, and question into a single input for the model
     combined_input = f"{prompt}\n\nContext: {context}\n\nQuestion: {question}"
 
-    # Generate a response using the Google Gemini model
-    response = model.generate_text(
-        input=combined_input,
-        temperature=0.7,
-        max_output_tokens=200
+    response = model.generate_content(
+    combined_input,
+    generation_config={
+        "temperature": 0.7,
+        "max_output_tokens": 500
+     }
     )
 
     return response.text  # Return the generated text from the model
